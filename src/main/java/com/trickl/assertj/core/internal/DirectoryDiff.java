@@ -2,6 +2,9 @@ package com.trickl.assertj.core.internal;
 
 import static org.assertj.core.util.Strings.quote;
 
+import com.trickl.assertj.util.diff.FileChangeDelta;
+import com.trickl.assertj.util.diff.FileMissingDelta;
+import com.trickl.assertj.util.diff.FileUnexpectedDelta;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
@@ -9,7 +12,6 @@ import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.AbstractMap;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -18,11 +20,7 @@ import lombok.Value;
 import org.assertj.core.internal.Diff;
 import org.assertj.core.util.Lists;
 import org.assertj.core.util.VisibleForTesting;
-import org.assertj.core.util.diff.ChangeDelta;
-import org.assertj.core.util.diff.Chunk;
-import org.assertj.core.util.diff.DeleteDelta;
 import org.assertj.core.util.diff.Delta;
-import org.assertj.core.util.diff.InsertDelta;
 import org.assertj.core.util.diff.Patch;
 
 /** Compares the contents of two directories. */
@@ -59,49 +57,34 @@ public class DirectoryDiff {
     Map<Path, File> expectedFileMap = getRelativePathMap(expected, filter);
 
     Set<Path> missingFiles = subtract(expectedFileMap.keySet(), actualFileMap.keySet());
-    Set<Path> surplusFiles = subtract(actualFileMap.keySet(), expectedFileMap.keySet());
+    Set<Path> unexpectedFiles = subtract(actualFileMap.keySet(), expectedFileMap.keySet());
 
     Map<Path, List<Delta<String>>> fileDiffs = getFileDiffs(actualFileMap, expectedFileMap, filter);
 
-    return summariseDiffs(missingFiles, surplusFiles, fileDiffs).getDeltas();
+    return summariseDiffs(missingFiles, unexpectedFiles, fileDiffs).getDeltas();
   }
 
   private Patch<String> summariseDiffs(
-      Set<Path> missingFiles, Set<Path> surplusFiles, Map<Path, List<Delta<String>>> fileDiffs) {
+      Set<Path> missingFiles, Set<Path> unexpectedFiles, Map<Path, List<Delta<String>>> fileDiffs) {
     Patch<String> patch = new Patch<>();
     missingFiles.forEach(
         path -> {
-          patch.addDelta(new DeleteDelta(pathAsChunk(path), emptyChunk()));
+          patch.addDelta(new FileMissingDelta(path));
         });
-    surplusFiles.forEach(
+    unexpectedFiles.forEach(
         path -> {
-          patch.addDelta(new InsertDelta(emptyChunk(), pathAsChunk(path)));
+          patch.addDelta(new FileUnexpectedDelta(path));
         });
     fileDiffs
         .entrySet()
         .forEach(
             fileDiff -> {
               if (!fileDiff.getValue().isEmpty()) {
-                patch.addDelta(
-                    new ChangeDelta(
-                        pathAsChunk(fileDiff.getKey()),
-                        fileDiffsAsChunk(fileDiff.getKey(), fileDiff.getValue())));
+                patch.addDelta(new FileChangeDelta(fileDiff.getKey()));
               }
             });
 
     return patch;
-  }
-
-  private Chunk<String> emptyChunk() {
-    return new Chunk(0, Collections.EMPTY_LIST);
-  }
-
-  private Chunk<String> pathAsChunk(Path path) {
-    return new Chunk(0, Lists.list(path.toString()));
-  }
-
-  private Chunk<String> fileDiffsAsChunk(Path path, List<Delta<String>> fileDiffs) {
-    return new Chunk(0, Lists.list(path.toString()));
   }
 
   private Map<Path, List<Delta<String>>> getFileDiffs(
@@ -109,16 +92,18 @@ public class DirectoryDiff {
     return actual
         .entrySet()
         .stream()
-        .map(actualPathAndFile ->
-            new MappedFile(
-                actualPathAndFile.getKey(),
-                actualPathAndFile.getValue(),
-                expected.get(actualPathAndFile.getKey())))
+        .map(
+            actualPathAndFile ->
+                new MappedFile(
+                    actualPathAndFile.getKey(),
+                    actualPathAndFile.getValue(),
+                    expected.get(actualPathAndFile.getKey())))
         .filter(mappedFile -> mappedFile.expectedFile != null)
-        .map(mappedFile ->
-            new AbstractMap.SimpleImmutableEntry<>(
-                  mappedFile.getActualPath(),
-                diffFiles(mappedFile.getActualFile(), mappedFile.getExpectedFile(), filter)))
+        .map(
+            mappedFile ->
+                new AbstractMap.SimpleImmutableEntry<>(
+                      mappedFile.getActualPath(),
+                    diffFiles(mappedFile.getActualFile(), mappedFile.getExpectedFile(), filter)))
         .filter(pathAndDiff -> !pathAndDiff.getValue().isEmpty())
         .collect(
             Collectors.toMap(
@@ -136,22 +121,19 @@ public class DirectoryDiff {
         return diff(actual, expected, filter);
       }
     } catch (IOException ex) {
-      return Lists.list(
-          new ChangeDelta<>(pathAsChunk(actual.toPath()), pathAsChunk(expected.toPath())));
+      return Lists.list(new FileChangeDelta(actual.toPath()));
     }
 
-    return Lists.list(
-        new ChangeDelta<>(pathAsChunk(actual.toPath()), pathAsChunk(expected.toPath())));
+    return Lists.list(new FileChangeDelta(actual.toPath()));
   }
 
-  private Map<Path, File> getRelativePathMap(File directory, FileFilter filter)
-      throws IOException {    
+  private Map<Path, File> getRelativePathMap(File directory, FileFilter filter) throws IOException {
     if (!directory.exists()) {
       String message = String.format("Directory does not exist %s", quote(directory.getPath()));
       throw new IOException(message);
     } else if (!directory.isDirectory()) {
       String message = String.format("File is not a directory %s", quote(directory.getPath()));
-      throw new IOException(message);  
+      throw new IOException(message);
     }
     return Arrays.asList(directory.listFiles(filter))
         .stream()

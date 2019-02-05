@@ -53,21 +53,21 @@ public class DirectoryDiff_FlatTest {
     }
 
     @Test
-    public void should_return_delete_delta_when_missing_file1() throws IOException {
+    public void should_return_missing_delta_when_missing_file1() throws IOException {
         Path actual = FileSystems.getDefault().getPath(basePath + "missing_file1");
         Path expected = FileSystems.getDefault().getPath(basePath + "directory");
         List<Delta<String>> diffs = directoryDiff.diff(actual.toFile(),  expected.toFile());
         assertThat(diffs).hasSize(1);
-        assertThat(diffs.get(0)).hasToString("TODO");
+        assertThat(diffs.get(0)).hasToString("File file1.txt MISSING");
     }
 
     @Test
-    public void should_return_insert_delta_when_surplus_file2() throws IOException {
+    public void should_return_unexpected_delta_when_unexpected_file2() throws IOException {
         Path actual = FileSystems.getDefault().getPath(basePath + "directory");
         Path expected = FileSystems.getDefault().getPath(basePath + "missing_file2");
         List<Delta<String>> diffs = directoryDiff.diff(actual.toFile(),  expected.toFile());
         assertThat(diffs).hasSize(1);
-        assertThat(diffs.get(0)).hasToString("TODO");
+        assertThat(diffs.get(0)).hasToString("File file2.txt UNEXPECTED");
     }
 
     @Test
@@ -76,6 +76,6 @@ public class DirectoryDiff_FlatTest {
         Path expected = FileSystems.getDefault().getPath(basePath + "file1_not_equal");
         List<Delta<String>> diffs = directoryDiff.diff(actual.toFile(),  expected.toFile());
         assertThat(diffs).hasSize(1);
-        assertThat(diffs.get(0)).hasToString("TODO");
+        assertThat(diffs.get(0)).hasToString("File file1.txt CHANGED");
     }
 }
