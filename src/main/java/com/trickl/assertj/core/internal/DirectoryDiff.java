@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -92,37 +93,18 @@ public class DirectoryDiff {
     Set<Path> unexpectedFiles = subtractPaths(actualFileMap.keySet(), expectedFileMap.keySet());
     Set<Path> commonFiles = commonPaths(actualFileMap.keySet(), expectedFileMap.keySet());
 
-    List<FileMissingDelta> missingFileDeltas =
-        missingFiles.stream().map(path -> new FileMissingDelta(path)).collect(Collectors.toList());
+    List<FileMissingDelta> missingFileDeltas = toFileMissingDeltas(missingFiles);
+    List<FileUnexpectedDelta> unexpectedFileDeltas = toFileUnexpectedDeltas(unexpectedFiles);
 
-    List<FileUnexpectedDelta> unexpectedFileDeltas =
-        unexpectedFiles
-            .stream()
-            .map(path -> new FileUnexpectedDelta(path))
-            .collect(Collectors.toList());
-
-    List<FileChangeDelta> changedFiles =
-        commonFiles
-            .stream()
-            .filter(path -> actualFileMap.get(path).isFile())
-            .map(path -> diffFile(actualFileMap.get(path), expectedFileMap.get(path)))
-            .filter(optional -> optional.isPresent())
-            .map(optional -> optional.get())
-            .collect(Collectors.toList());
-
-    List<DirectoryChangeDelta> changedSubDirectories =
-        commonFiles
-            .stream()
-            .filter(path -> actualFileMap.get(path).isDirectory())
-            .map(path -> diffDirectory(actualFileMap.get(path), expectedFileMap.get(path), filter))
-            .filter(optional -> optional.isPresent())
-            .map(optional -> optional.get())
-            .collect(Collectors.toList());
+    List<FileChangeDelta> changedFileDeltas =
+        getFileChangedDeltas(commonFiles, actualFileMap, expectedFileMap);
+    List<DirectoryChangeDelta> dirChangedDeltas =
+        getDirectoryChangedDeltas(commonFiles, filter, actualFileMap, expectedFileMap);
 
     if (missingFileDeltas.isEmpty()
         && unexpectedFileDeltas.isEmpty()
-        && changedSubDirectories.isEmpty()
-        && changedFiles.isEmpty()) {
+        && dirChangedDeltas.isEmpty()
+        && changedFileDeltas.isEmpty()) {
       return Optional.empty();
     }
 
@@ -131,8 +113,8 @@ public class DirectoryDiff {
             actual.toPath(),
             missingFileDeltas,
             unexpectedFileDeltas,
-            changedSubDirectories,
-            changedFiles);
+            dirChangedDeltas,
+            changedFileDeltas);
 
     return Optional.of(delta);
   }
@@ -200,5 +182,38 @@ public class DirectoryDiff {
 
   private static Set<Path> commonPaths(Set<Path> a, Set<Path> b) {
     return a.stream().filter(path -> b.contains(path)).collect(Collectors.toSet());
+  }
+
+  private static List<FileMissingDelta> toFileMissingDeltas(Collection<Path> paths) {
+    return paths.stream().map(path -> new FileMissingDelta(path)).collect(Collectors.toList());
+  }
+
+  private static List<FileUnexpectedDelta> toFileUnexpectedDeltas(Collection<Path> paths) {
+    return paths.stream().map(path -> new FileUnexpectedDelta(path)).collect(Collectors.toList());
+  }
+
+  private List<FileChangeDelta> getFileChangedDeltas(
+      Collection<Path> paths, Map<Path, File> actualFileMap, Map<Path, File> expectedFileMap) {
+    return paths
+        .stream()
+        .filter(path -> actualFileMap.get(path).isFile())
+        .map(path -> diffFile(actualFileMap.get(path), expectedFileMap.get(path)))
+        .filter(optional -> optional.isPresent())
+        .map(optional -> optional.get())
+        .collect(Collectors.toList());
+  }
+
+  private List<DirectoryChangeDelta> getDirectoryChangedDeltas(
+      Collection<Path> paths,
+      FileFilter filter,
+      Map<Path, File> actualFileMap,
+      Map<Path, File> expectedFileMap) {
+    return paths
+        .stream()
+        .filter(path -> actualFileMap.get(path).isDirectory())
+        .map(path -> diffDirectory(actualFileMap.get(path), expectedFileMap.get(path), filter))
+        .filter(optional -> optional.isPresent())
+        .map(optional -> optional.get())
+        .collect(Collectors.toList());
   }
 }
