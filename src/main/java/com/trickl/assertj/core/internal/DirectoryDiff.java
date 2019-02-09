@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -46,20 +47,13 @@ public class DirectoryDiff {
    */
   @VisibleForTesting
   public List<Delta<String>> diff(File actual, File expected, FileFilter filter) {
-    if (actual.isFile()) {
-      if (filter.accept(actual)) {
-        Optional<FileChangeDelta> delta = diffFile(actual, expected);
-        if (delta.isPresent()) {
-          return Lists.list(delta.get());
-        }
-      }
-    } else {
-      Optional<DirectoryChangeDelta> delta = diffDirectory(actual, expected, filter);
-      if (delta.isPresent()) {
-        return Lists.list(delta.get());
-      }
+    List<Delta<String>> deltas = new LinkedList<>();
+    if (actual.isFile() && filter.accept(actual)) {
+      diffFile(actual, expected).ifPresent(delta -> deltas.add(delta));
+    } else if (!actual.isFile()) {
+      diffDirectory(actual, expected, filter).ifPresent(delta -> deltas.add(delta));
     }
-    return Collections.EMPTY_LIST;
+    return deltas;
   }
 
   /**
