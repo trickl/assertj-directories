@@ -1,15 +1,14 @@
 package com.trickl.assertj.util.diff;
 
+import static com.trickl.assertj.util.diff.FileChangeDelta.toChunk;
+
 import com.google.gson.Gson;
 import com.trickl.assertj.core.presentation.DirectoryChange;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.Getter;
-import org.assertj.core.util.Lists;
-import org.assertj.core.util.diff.Chunk;
 import org.assertj.core.util.diff.Delta;
 
 /**
@@ -31,7 +30,7 @@ public class DirectoryChangeDelta<T> extends Delta<T> {
    * @param errorMessage Any error encountered
    */
   public DirectoryChangeDelta(Path path, String errorMessage) {
-    super(new Chunk(0, Lists.list(path)), new Chunk(0, Lists.list(path)));
+    super(toChunk(path), FileChangeDelta.toChunk(path));
 
     summary = DirectoryChange.builder().path(path.toString()).errorMessage(errorMessage).build();
   }
@@ -51,7 +50,7 @@ public class DirectoryChangeDelta<T> extends Delta<T> {
       Collection<FileUnexpectedDelta> unexpectedFiles,
       Collection<DirectoryChangeDelta> changedSubDirectories,
       Collection<FileChangeDelta> changedFiles) {
-    super(new Chunk(0, Lists.list(path)), new Chunk(0, Lists.list(path)));
+    super(FileChangeDelta.toChunk(path), FileChangeDelta.toChunk(path));
 
     summary =
         DirectoryChange.builder()
@@ -86,7 +85,7 @@ public class DirectoryChangeDelta<T> extends Delta<T> {
   private static <T> Collection<T> nullIfEmpty(Collection<T> list) {
     return list.isEmpty() ? null : list;
   }
-  
+
   private static <T> boolean nullSafeIsEmpty(Collection<T> col) {
     return col == null || col.isEmpty();
   }
@@ -107,15 +106,16 @@ public class DirectoryChangeDelta<T> extends Delta<T> {
     Gson gson = new Gson();
     return gson.toJson(summary);
   }
-  
+
   /**
    * Return true if there any changes in this delta.
+   *
    * @return True if changes exist
    */
   public boolean hasChanges() {
     return !nullSafeIsEmpty(summary.getMissingFiles())
-      || !nullSafeIsEmpty(summary.getUnexpectedFiles())
-      || !nullSafeIsEmpty(summary.getChangedFiles())
-      || !nullSafeIsEmpty(summary.getChangedSubDirectories());    
+        || !nullSafeIsEmpty(summary.getUnexpectedFiles())
+        || !nullSafeIsEmpty(summary.getChangedFiles())
+        || !nullSafeIsEmpty(summary.getChangedSubDirectories());
   }
 }

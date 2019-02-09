@@ -25,18 +25,18 @@ public class FileChangeDelta<T> extends Delta<T> {
   
   /**
    * Create a file change delta.
-   * @param changedFilePath The path of the changed file.
+   * @param path The path of the changed file.
    * @param errorMessage The error encountered
    */
-  public FileChangeDelta(Path changedFilePath, String errorMessage) {
-    super(new Chunk(0, Lists.list(changedFilePath)), new Chunk(0, Lists.list(changedFilePath)));
+  public FileChangeDelta(Path path, String errorMessage) {
+    super(toChunk(path), toChunk(path));
   
     summary = FileChange.builder()
-        .path(changedFilePath.toString())
+        .path(path.toString())
         .errorMessage(errorMessage)
         .build();
   }
-
+  
   /**
    * Create a file change delta.
    * @param changedFilePath The path of the changed file.
@@ -66,5 +66,14 @@ public class FileChangeDelta<T> extends Delta<T> {
   public String toString() {
     Gson gson = new Gson();
     return gson.toJson(summary);
+  }  
+  
+  /**
+   * Represent a file path as an empty chunk.
+   * @param path The file path
+   * @return An empty chunk
+   */
+  public static <T> Chunk<T> toChunk(Path path) {
+    return new Chunk(0, Lists.list(path));
   }
 }
