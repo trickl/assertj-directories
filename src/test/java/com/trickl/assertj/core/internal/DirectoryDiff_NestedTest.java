@@ -48,7 +48,7 @@ public class DirectoryDiff_NestedTest {
     Path expected = FileSystems.getDefault().getPath(basePath + "directory");
     List<Delta<String>> diffs = directoryDiff.diff(actual.toFile(), expected.toFile());
     assertThat(diffs).hasSize(1);
-    assertThat(diffs.get(0)).hasToString("File directory1 MISSING");
+    assertThat(diffs.get(0)).hasToString("{\"path\":\"src/test/resources/DirectoryDiff/nested/missing_file1\",\"missingFiles\":[\"directory1\"]}");
   }
 
   @Test
@@ -57,7 +57,7 @@ public class DirectoryDiff_NestedTest {
     Path expected = FileSystems.getDefault().getPath(basePath + "missing_file2");
     List<Delta<String>> diffs = directoryDiff.diff(actual.toFile(), expected.toFile());
     assertThat(diffs).hasSize(1);
-    assertThat(diffs.get(0)).hasToString("File directory2 UNEXPECTED");
+    assertThat(diffs.get(0)).hasToString("{\"path\":\"src/test/resources/DirectoryDiff/nested/directory\",\"unexpectedFiles\":[\"directory2\"]}");
   }
 
   @Test
@@ -66,6 +66,6 @@ public class DirectoryDiff_NestedTest {
     Path expected = FileSystems.getDefault().getPath(basePath + "file1_not_equal");
     List<Delta<String>> diffs = directoryDiff.diff(actual.toFile(), expected.toFile());
     assertThat(diffs).hasSize(1);
-    assertThat(diffs.get(0)).hasToString("File directory1 CHANGED");
+    assertThat(diffs.get(0)).hasToString("{\"path\":\"src/test/resources/DirectoryDiff/nested/directory\",\"changedSubDirectories\":[{\"path\":\"src/test/resources/DirectoryDiff/nested/directory/directory1\",\"changedFiles\":[{\"path\":\"src/test/resources/DirectoryDiff/nested/directory/directory1/file1.txt\",\"diffs\":[{\"actual\":\"testtest\",\"expected\":\"test\",\"lineNumber\":1}]}]}]}");
   }
 }

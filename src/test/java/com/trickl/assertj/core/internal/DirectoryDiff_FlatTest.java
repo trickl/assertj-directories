@@ -1,9 +1,10 @@
 package com.trickl.assertj.core.internal;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.*;
+import static org.assertj.core.api.Assertions.contentOf;
 
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.List;
@@ -48,7 +49,7 @@ public class DirectoryDiff_FlatTest {
     Path expected = FileSystems.getDefault().getPath(basePath + "directory");
     List<Delta<String>> diffs = directoryDiff.diff(actual.toFile(), expected.toFile());
     assertThat(diffs).hasSize(1);
-    assertThat(diffs.get(0)).hasToString("File file1.txt MISSING");
+    assertThat(diffs.get(0)).hasToString("{\"path\":\"src/test/resources/DirectoryDiff/simple/missing_file1\",\"missingFiles\":[\"file1.txt\"]}");
   }
 
   @Test
@@ -57,7 +58,7 @@ public class DirectoryDiff_FlatTest {
     Path expected = FileSystems.getDefault().getPath(basePath + "missing_file2");
     List<Delta<String>> diffs = directoryDiff.diff(actual.toFile(), expected.toFile());
     assertThat(diffs).hasSize(1);
-    assertThat(diffs.get(0)).hasToString("File file2.txt UNEXPECTED");
+    assertThat(diffs.get(0)).hasToString("{\"path\":\"src/test/resources/DirectoryDiff/simple/directory\",\"unexpectedFiles\":[\"file2.txt\"]}");
   }
 
   @Test
@@ -66,7 +67,7 @@ public class DirectoryDiff_FlatTest {
     Path expected = FileSystems.getDefault().getPath(basePath + "file1_not_equal");
     List<Delta<String>> diffs = directoryDiff.diff(actual.toFile(), expected.toFile());
     assertThat(diffs).hasSize(1);
-    assertThat(diffs.get(0)).hasToString("File file1.txt CHANGED");
+    assertThat(diffs.get(0)).hasToString("{\"path\":\"src/test/resources/DirectoryDiff/simple/directory\",\"changedFiles\":[{\"path\":\"src/test/resources/DirectoryDiff/simple/directory/file1.txt\",\"diffs\":[{\"actual\":\"testtest\",\"expected\":\"test\",\"lineNumber\":1}]}]}");
   }
   
   @Test
@@ -75,6 +76,6 @@ public class DirectoryDiff_FlatTest {
     Path expected = FileSystems.getDefault().getPath(basePath + "directory");
     List<Delta<String>> diffs = directoryDiff.diff(actual.toFile(), expected.toFile());
     assertThat(diffs).hasSize(1);
-    assertThat(diffs.get(0)).hasToString("Should be an error");
+    assertThat(diffs.get(0)).hasToString("{\"path\":\"src/test/resources/DirectoryDiff/simple/does_not_exist\",\"errorMessage\":\"Directory does not exist \\u0027src/test/resources/DirectoryDiff/simple/does_not_exist\\u0027\"}");
   }
 }
