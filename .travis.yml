@@ -1,0 +1,25 @@
+assertj-directories: java
+env:
+  global:
+  - CC_TEST_REPORTER_ID=012860db80809891c871d1d95a93dcd4126206a2164734137479a5016f8c336f
+before_script:
+- curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64
+  > ./cc-test-reporter
+- chmod +x ./cc-test-reporter
+- "./cc-test-reporter before-build"
+script:
+- mvn test
+after_script:
+- "./cc-test-reporter format-coverage -d -t jacoco ./target/jacoco-ut/jacoco.xml"
+- "./cc-test-reporter upload-coverage -d"
+before_deploy:
+- mvn help:evaluate -N -Dexpression=project.version|grep -v '\['
+- export project_version=$(mvn help:evaluate -N -Dexpression=project.version|grep
+  -v '\[')
+deploy:
+  provider: releases
+  api_key:
+    secure: lknJ0uE9OMUolvYvcdW+7w2HjP7ofK3atIispKPs1po4zWVr50ccSn839MWSF830+PrWhOj4jNjku8/lzbduztsWgeJ9VKWdufrMYoE+0tv9fEM9x5hoKdQMeJ0Ci/uVchYXHu41kbfdqVnk2tRUz0nLRwU9CrEntS0PA4UxXgvG7Va8r2hsWMCAlUcR3maDg5VIDneWNcIS0qp8DDBCdqA+mIXRW6khynFoYDulsFctBWqCptLALjWWh42Zzw/CTOg7MphLA/wJqd1ReT0PIMKLPETK5beERYnZ07ESwGEqhVXR/sOvNPdyjvfzlPhw/qdoR3ooiJlwJAelZ7Ier9O349OVdijJiLSzs1tfncC6RsfxfOkEeOl8ifTPAarlgYUZ4ztZZcZBWCZpBzrh5n/2n4erCbfarcIVzWDB3ubdC4GMB2P6VO03VcvCF+skg6txlSpL5u/bvsEYqwcUz24m9Zz6hz/z+UdQZBbLK2AaSTHfZyemozp7YBaDMxzMZWHJSQtSX2d4apdPI8T0Yzn13ELg8i1e6TP/zOD6BG74Bbllx7WOHpyTzt8hVcz/G60z9oEGx2rGxjVN1j16jxqr0hn8KqD3JDUw4uHygU0pYEyjrqqVkdP2Vq32JnXA9HFHDEFEFDl7OAuAkHpEwTyPxviDY4GHBXAtZbiclHA=
+  file: ".travis.yml"
+  on:
+    repo: trickl/assertj-directories
