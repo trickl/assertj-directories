@@ -2,6 +2,8 @@ package com.trickl.assertj.core.internal;
 
 import static org.assertj.core.util.Strings.quote;
 
+import com.trickl.assertj.core.presentation.FileChangeSection;
+import com.trickl.assertj.util.diff.DirectoryChangeDelta;
 import com.trickl.assertj.util.diff.FileChangeDelta;
 import com.trickl.assertj.util.diff.FileMissingDelta;
 import com.trickl.assertj.util.diff.FileUnexpectedDelta;
@@ -10,29 +12,21 @@ import java.io.FileFilter;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
-import java.util.AbstractMap;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import lombok.Value;
 import org.assertj.core.internal.Diff;
 import org.assertj.core.util.Lists;
 import org.assertj.core.util.VisibleForTesting;
 import org.assertj.core.util.diff.Delta;
-import org.assertj.core.util.diff.Patch;
 
 /** Compares the contents of two directories. */
 @VisibleForTesting
 public class DirectoryDiff {
-
-  @Value
-  private class MappedFile {
-    private Path actualPath;
-    private File actualFile;
-    private File expectedFile;
-  }
 
   @VisibleForTesting Diff diff = new Diff();
 
@@ -48,83 +42,130 @@ public class DirectoryDiff {
    * @param expected The expected directory structure and content
    * @param filter The files to consider
    * @return A list of differences
+   */
+  @VisibleForTesting
+  public List<Delta<String>> diff(File actual, File expected, FileFilter filter) {
+    if (actual.isFile()) {
+      if (filter.accept(actual)) {
+        Optional<FileChangeDelta> delta = diffFile(actual, expected);
+        if (delta.isPresent()) {
+          return Lists.list(delta.get());
+        }
+      }
+    } else {
+      Optional<DirectoryChangeDelta> delta = diffDirectory(actual, expected, filter);
+      if (delta.isPresent()) {
+        return Lists.list(delta.get());
+      }
+    }
+    return Collections.EMPTY_LIST;
+  }
+
+  /**
+   * Find the differences between two directories.
+   *
+   * @param actual The directory under comparison
+   * @param expected The expected directory structure and content
+   * @param filter The files to consider
+   * @return A list of differences
    * @throws IOException If a file or directory cannot be read
    */
   @VisibleForTesting
-  public List<Delta<String>> diff(File actual, File expected, FileFilter filter)
-      throws IOException {
-    Map<Path, File> actualFileMap = getRelativePathMap(actual, filter);
-    Map<Path, File> expectedFileMap = getRelativePathMap(expected, filter);
-
-    Set<Path> missingFiles = subtract(expectedFileMap.keySet(), actualFileMap.keySet());
-    Set<Path> unexpectedFiles = subtract(actualFileMap.keySet(), expectedFileMap.keySet());
-
-    Map<Path, List<Delta<String>>> fileDiffs = getFileDiffs(actualFileMap, expectedFileMap, filter);
-
-    return summariseDiffs(missingFiles, unexpectedFiles, fileDiffs).getDeltas();
-  }
-
-  private Patch<String> summariseDiffs(
-      Set<Path> missingFiles, Set<Path> unexpectedFiles, Map<Path, List<Delta<String>>> fileDiffs) {
-    Patch<String> patch = new Patch<>();
-    missingFiles.forEach(
-        path -> {
-          patch.addDelta(new FileMissingDelta(path));
-        });
-    unexpectedFiles.forEach(
-        path -> {
-          patch.addDelta(new FileUnexpectedDelta(path));
-        });
-    fileDiffs
-        .entrySet()
-        .forEach(
-            fileDiff -> {
-              if (!fileDiff.getValue().isEmpty()) {
-                patch.addDelta(new FileChangeDelta(fileDiff.getKey()));
-              }
-            });
-
-    return patch;
-  }
-
-  private Map<Path, List<Delta<String>>> getFileDiffs(
-      Map<Path, File> actual, Map<Path, File> expected, FileFilter filter) {
-    return actual
-        .entrySet()
-        .stream()
-        .map(
-            actualPathAndFile ->
-                new MappedFile(
-                    actualPathAndFile.getKey(),
-                    actualPathAndFile.getValue(),
-                    expected.get(actualPathAndFile.getKey())))
-        .filter(mappedFile -> mappedFile.expectedFile != null)
-        .map(
-            mappedFile ->
-                new AbstractMap.SimpleImmutableEntry<>(
-                      mappedFile.getActualPath(),
-                    diffFiles(mappedFile.getActualFile(), mappedFile.getExpectedFile(), filter)))
-        .filter(pathAndDiff -> !pathAndDiff.getValue().isEmpty())
-        .collect(
-            Collectors.toMap(
-                pathAndDiff -> pathAndDiff.getKey(), pathAndDiff -> pathAndDiff.getValue()));
-  }
-
-  private List<Delta<String>> diffFiles(File actual, File expected, FileFilter filter) {
+  public Optional<DirectoryChangeDelta> diffDirectory(
+      File actual, File expected, FileFilter filter) {
+    Map<Path, File> actualFileMap;
     try {
-      if (actual.isFile() && expected.isFile()) {
-        Charset actualCharSet = Charset.defaultCharset();
-        Charset expectedCharSet = Charset.defaultCharset();
-        return diff.diff(actual, actualCharSet, expected, expectedCharSet);
-
-      } else if (actual.isDirectory() && expected.isDirectory()) {
-        return diff(actual, expected, filter);
-      }
+      throwIfDifferentFileTypes(actual, expected);
+      actualFileMap = getRelativePathMap(actual, filter);
     } catch (IOException ex) {
-      return Lists.list(new FileChangeDelta(actual.toPath()));
+      return Optional.of(new DirectoryChangeDelta(actual.toPath(), ex.getMessage()));
     }
 
-    return Lists.list(new FileChangeDelta(actual.toPath()));
+    Map<Path, File> expectedFileMap;
+    try {
+      expectedFileMap = getRelativePathMap(expected, filter);
+    } catch (IOException ex) {
+      return Optional.of(new DirectoryChangeDelta(expected.toPath(), ex.getMessage()));
+    }
+
+    Set<Path> missingFiles = subtractPaths(expectedFileMap.keySet(), actualFileMap.keySet());
+    Set<Path> unexpectedFiles = subtractPaths(actualFileMap.keySet(), expectedFileMap.keySet());
+    Set<Path> commonFiles = commonPaths(actualFileMap.keySet(), expectedFileMap.keySet());
+
+    List<FileMissingDelta> missingFileDeltas =
+        missingFiles.stream().map(path -> new FileMissingDelta(path)).collect(Collectors.toList());
+
+    List<FileUnexpectedDelta> unexpectedFileDeltas =
+        unexpectedFiles
+            .stream()
+            .map(path -> new FileUnexpectedDelta(path))
+            .collect(Collectors.toList());
+
+    List<FileChangeDelta> changedFiles =
+        commonFiles
+            .stream()
+            .filter(path -> actualFileMap.get(path).isFile())
+            .map(path -> diffFile(actualFileMap.get(path), expectedFileMap.get(path)))
+            .filter(optional -> optional.isPresent())
+            .map(optional -> optional.get())
+            .collect(Collectors.toList());
+
+    List<DirectoryChangeDelta> changedSubDirectories =
+        commonFiles
+            .stream()
+            .filter(path -> actualFileMap.get(path).isDirectory())
+            .map(path -> diffDirectory(actualFileMap.get(path), expectedFileMap.get(path), filter))
+            .filter(optional -> optional.isPresent())
+            .map(optional -> optional.get())
+            .collect(Collectors.toList());
+
+    if (missingFileDeltas.isEmpty()
+        && unexpectedFileDeltas.isEmpty()
+        && changedSubDirectories.isEmpty()
+        && changedFiles.isEmpty()) {
+      return Optional.empty();
+    }
+
+    DirectoryChangeDelta delta =
+        new DirectoryChangeDelta(
+            actual.toPath(),
+            missingFileDeltas,
+            unexpectedFileDeltas,
+            changedSubDirectories,
+            changedFiles);
+
+    return Optional.of(delta);
+  }
+
+  private Optional<FileChangeDelta> diffFile(File actual, File expected) {
+    List<FileChangeSection> diffs;
+    try {
+      throwIfDifferentFileTypes(actual, expected);
+
+      Charset actualCharSet = Charset.defaultCharset();
+      Charset expectedCharSet = Charset.defaultCharset();
+      List<Delta<String>> fileDiffs = diff.diff(actual, actualCharSet, expected, expectedCharSet);
+      if (fileDiffs.isEmpty()) {
+        return Optional.empty();
+      }
+
+      diffs =
+          fileDiffs
+              .stream()
+              .map(
+                  change ->
+                      FileChangeSection.builder()
+                          .actual(String.join(",", change.getOriginal().getLines()))
+                          .expected(String.join(",", change.getRevised().getLines()))
+                          .lineNumber(change.lineNumber())
+                          .build())
+              .collect(Collectors.toList());
+
+    } catch (IOException ex) {
+      return Optional.of(new FileChangeDelta(actual.toPath(), ex.getMessage()));
+    }
+
+    return Optional.of(new FileChangeDelta(actual.toPath(), diffs));
   }
 
   private Map<Path, File> getRelativePathMap(File directory, FileFilter filter) throws IOException {
@@ -140,11 +181,24 @@ public class DirectoryDiff {
         .collect(Collectors.toMap(file -> getRelativePath(directory, file), file -> file));
   }
 
+  private static void throwIfDifferentFileTypes(File a, File b) throws IOException {
+    if (a.isFile() != b.isFile()) {
+      String message =
+          String.format(
+              "File %s is different file type than %s", quote(a.getPath()), quote(b.getPath()));
+      throw new IOException(message);
+    }
+  }
+
   private static Path getRelativePath(File directory, File file) {
     return directory.toPath().relativize(file.toPath());
   }
 
-  private static Set<Path> subtract(Set<Path> a, Set<Path> b) {
+  private static Set<Path> subtractPaths(Set<Path> a, Set<Path> b) {
     return a.stream().filter(path -> !b.contains(path)).collect(Collectors.toSet());
+  }
+
+  private static Set<Path> commonPaths(Set<Path> a, Set<Path> b) {
+    return a.stream().filter(path -> b.contains(path)).collect(Collectors.toSet());
   }
 }

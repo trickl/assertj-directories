@@ -1,9 +1,12 @@
 package com.trickl.assertj.util.diff;
 
-import static org.assertj.core.util.Strings.quote;
-
+import com.google.gson.Gson;
+import com.trickl.assertj.core.presentation.FileChange;
+import com.trickl.assertj.core.presentation.FileChangeSection;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.stream.Collectors;
+import lombok.Getter;
 import org.assertj.core.util.Lists;
 import org.assertj.core.util.diff.Chunk;
 import org.assertj.core.util.diff.Delta;
@@ -18,11 +21,34 @@ import org.assertj.core.util.diff.Delta;
  */
 public class FileChangeDelta<T> extends Delta<T> {
 
-  private final Path changedFilePath;
-
-  public FileChangeDelta(Path changedFilePath) {
+  @Getter private final FileChange summary;
+  
+  /**
+   * Create a file change delta.
+   * @param changedFilePath The path of the changed file.
+   * @param errorMessage The error encountered
+   */
+  public FileChangeDelta(Path changedFilePath, String errorMessage) {
     super(new Chunk(0, Lists.list(changedFilePath)), new Chunk(0, Lists.list(changedFilePath)));
-    this.changedFilePath = changedFilePath;
+  
+    summary = FileChange.builder()
+        .path(changedFilePath.toString())
+        .errorMessage(errorMessage)
+        .build();
+  }
+
+  /**
+   * Create a file change delta.
+   * @param changedFilePath The path of the changed file.
+   * @param diffs The list of changes.
+   */
+  public FileChangeDelta(Path changedFilePath, List<FileChangeSection> diffs) {
+    super(new Chunk(0, Lists.list(changedFilePath)), new Chunk(0, Lists.list(changedFilePath)));
+  
+    summary = FileChange.builder()
+        .path(changedFilePath.toString())
+        .diffs(diffs)
+        .build();
   }
 
   @Override
@@ -38,6 +64,7 @@ public class FileChangeDelta<T> extends Delta<T> {
 
   @Override
   public String toString() {
-    return String.format("File %s CHANGED", changedFilePath);
+    Gson gson = new Gson();
+    return gson.toJson(summary);
   }
 }

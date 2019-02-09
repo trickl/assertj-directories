@@ -1,10 +1,10 @@
 package com.trickl.assertj.util.diff;
 
-import static org.assertj.core.util.Strings.quote;
-
 import java.nio.file.Path;
+
 import java.util.Collections;
 import java.util.List;
+import lombok.Getter;
 import org.assertj.core.util.Lists;
 import org.assertj.core.util.diff.Chunk;
 import org.assertj.core.util.diff.Delta;
@@ -19,7 +19,7 @@ import org.assertj.core.util.diff.Delta;
  */
 public class FileMissingDelta<T> extends Delta<T> {
 
-  private final Path missingFilePath;
+  @Getter private final Path missingFilePath;
 
   public FileMissingDelta(Path missingFilePath) {
     super(new Chunk(0, Lists.list(missingFilePath)), new Chunk(0, Collections.EMPTY_LIST));
@@ -36,9 +36,4 @@ public class FileMissingDelta<T> extends Delta<T> {
 
   @Override
   public void verify(List<T> target) throws IllegalStateException {}
-
-  @Override
-  public String toString() {
-    return String.format("File %s MISSING", missingFilePath);
-  }
 }

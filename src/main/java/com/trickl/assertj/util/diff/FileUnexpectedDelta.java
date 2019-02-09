@@ -1,10 +1,10 @@
 package com.trickl.assertj.util.diff;
 
-import static org.assertj.core.util.Strings.quote;
-
 import java.nio.file.Path;
+
 import java.util.Collections;
 import java.util.List;
+import lombok.Getter;
 import org.assertj.core.util.Lists;
 import org.assertj.core.util.diff.Chunk;
 import org.assertj.core.util.diff.Delta;
@@ -19,13 +19,13 @@ import org.assertj.core.util.diff.Delta;
  */
 public class FileUnexpectedDelta<T> extends Delta<T> {
 
-  private final Path unexpectedFilePath;
+  @Getter private final Path unexpectedFilePath;
 
   public FileUnexpectedDelta(Path unexpectedFilePath) {
     super(new Chunk(0, Collections.EMPTY_LIST), new Chunk(0, Lists.list(unexpectedFilePath)));
     this.unexpectedFilePath = unexpectedFilePath;
   }
- 
+
   @Override
   public void applyTo(List<T> target) {}
 
@@ -35,10 +35,5 @@ public class FileUnexpectedDelta<T> extends Delta<T> {
   @Override
   public TYPE getType() {
     return Delta.TYPE.INSERT;
-  }
-
-  @Override
-  public String toString() {
-    return String.format("File %s UNEXPECTED", unexpectedFilePath);
   }
 }
