@@ -5,7 +5,7 @@
 [![Test Coverage](https://api.codeclimate.com/v1/badges/5a9679b0cc2d87a89603/test_coverage)](https://codeclimate.com/github/trickl/assertj-directories/test_coverage)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Provides assertions like AssertJ for comparing directions
+Provides assertions like AssertJ for comparing directories
 
 ### Prerequisites
 
