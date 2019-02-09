@@ -5,6 +5,7 @@ import com.trickl.assertj.core.presentation.DirectoryChange;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import org.assertj.core.util.Lists;
@@ -82,8 +83,12 @@ public class DirectoryChangeDelta<T> extends Delta<T> {
             .build();
   }
 
-  private static <T> List<T> nullIfEmpty(List<T> list) {
+  private static <T> Collection<T> nullIfEmpty(Collection<T> list) {
     return list.isEmpty() ? null : list;
+  }
+  
+  private static <T> boolean nullSafeIsEmpty(Collection<T> col) {
+    return col == null || col.isEmpty();
   }
 
   @Override
@@ -101,5 +106,16 @@ public class DirectoryChangeDelta<T> extends Delta<T> {
   public String toString() {
     Gson gson = new Gson();
     return gson.toJson(summary);
+  }
+  
+  /**
+   * Return true if there any changes in this delta.
+   * @return True if changes exist
+   */
+  public boolean hasChanges() {
+    return !nullSafeIsEmpty(summary.getMissingFiles())
+      || !nullSafeIsEmpty(summary.getUnexpectedFiles())
+      || !nullSafeIsEmpty(summary.getChangedFiles())
+      || !nullSafeIsEmpty(summary.getChangedSubDirectories());    
   }
 }

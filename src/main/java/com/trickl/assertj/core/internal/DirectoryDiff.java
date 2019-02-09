@@ -86,21 +86,13 @@ public class DirectoryDiff {
     Set<Path> missingFiles = subtractPaths(expectedFileMap.keySet(), actualFileMap.keySet());
     Set<Path> unexpectedFiles = subtractPaths(actualFileMap.keySet(), expectedFileMap.keySet());
     Set<Path> commonFiles = commonPaths(actualFileMap.keySet(), expectedFileMap.keySet());
-
+    
     List<FileMissingDelta> missingFileDeltas = toFileMissingDeltas(missingFiles);
     List<FileUnexpectedDelta> unexpectedFileDeltas = toFileUnexpectedDeltas(unexpectedFiles);
-
     List<FileChangeDelta> changedFileDeltas =
         getFileChangedDeltas(commonFiles, actualFileMap, expectedFileMap);
     List<DirectoryChangeDelta> dirChangedDeltas =
         getDirectoryChangedDeltas(commonFiles, filter, actualFileMap, expectedFileMap);
-
-    if (missingFileDeltas.isEmpty()
-        && unexpectedFileDeltas.isEmpty()
-        && dirChangedDeltas.isEmpty()
-        && changedFileDeltas.isEmpty()) {
-      return Optional.empty();
-    }
 
     DirectoryChangeDelta delta =
         new DirectoryChangeDelta(
@@ -110,7 +102,7 @@ public class DirectoryDiff {
             dirChangedDeltas,
             changedFileDeltas);
 
-    return Optional.of(delta);
+    return delta.hasChanges() ? Optional.of(delta) : Optional.empty();
   }
 
   private Optional<FileChangeDelta> diffFile(File actual, File expected) {

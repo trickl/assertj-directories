@@ -1,6 +1,6 @@
 package com.trickl.assertj.core.presentation;
 
-import java.util.List;
+import java.util.Collection;
 import lombok.Builder;
 import lombok.Value;
 
@@ -8,6 +8,6 @@ import lombok.Value;
 @Builder
 public class FileChange {
   private final String path;
-  private final List<FileChangeSection> diffs;
+  private final Collection<FileChangeSection> diffs;
   private final String errorMessage;
 }
