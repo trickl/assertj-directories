@@ -54,7 +54,7 @@ public class DirectoryDiff {
       FileFilter filter,
       List<AbstractMap.Entry<FileFilter, BiFunction<File, File, List<Delta<String>>>>> fileDiffAlgo,
       Function<Path, Path> diffOutputLocation) {
-     return diff(actual, expected, filter);   
+    return diff(actual, expected, filter);   
   }
 
   /**
