@@ -18,12 +18,13 @@ To install from Maven Central:
   <artifactId>assertj-directories</artifactId>
   <version>0.1.1</version>
 </dependency>
+```
 
 ## Usage
 
 See the Junit tests for usage
 
-### Installing
+### Building
 
 To download the library into a folder called "assertj-directories" run
 
