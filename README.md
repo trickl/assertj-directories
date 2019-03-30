@@ -1,5 +1,5 @@
 # Trickl AssertJ Directories
-
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.trickl/assertj-directories/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.trickl/assertj-directories)
 [![build_status](https://travis-ci.com/trickl/assertj-directories.svg?branch=master)](https://travis-ci.com/trickl/assertj-directories)
 [![Maintainability](https://api.codeclimate.com/v1/badges/5a9679b0cc2d87a89603/maintainability)](https://codeclimate.com/github/trickl/assertj-directories/maintainability)
 [![Test Coverage](https://api.codeclimate.com/v1/badges/5a9679b0cc2d87a89603/test_coverage)](https://codeclimate.com/github/trickl/assertj-directories/test_coverage)
@@ -7,9 +7,17 @@
 
 Provides assertions like AssertJ for comparing directories
 
-### Prerequisites
+Installation
+============
 
-Requires Maven and a Java 6 compiler installed on your system.
+To install from Maven Central:
+
+```xml
+<dependency>
+  <groupId>com.github.trickl</groupId>
+  <artifactId>assertj-directories</artifactId>
+  <version>0.1.1</version>
+</dependency>
 
 ## Usage
 
