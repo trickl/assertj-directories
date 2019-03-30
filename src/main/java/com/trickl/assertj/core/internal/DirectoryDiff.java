@@ -83,7 +83,6 @@ public class DirectoryDiff {
    * @param expected The expected directory structure and content
    * @param filter The files to consider
    * @return A list of differences
-   * @throws IOException If a file or directory cannot be read
    */
   @VisibleForTesting
   public Optional<DirectoryChangeDelta> diffDirectory(

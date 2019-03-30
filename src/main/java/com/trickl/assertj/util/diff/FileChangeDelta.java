@@ -70,6 +70,7 @@ public class FileChangeDelta<T> extends Delta<T> {
   
   /**
    * Represent a file path as an empty chunk.
+   * @param <T> Chunk type
    * @param path The file path
    * @return An empty chunk
    */
